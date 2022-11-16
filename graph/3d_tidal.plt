@@ -11,8 +11,8 @@ set view equal xyz
 set ticslevel 0
 
 num = 200
-last_chunk_index = 10000
-skip = 400
+last_chunk_index = 20000
+skip = 200
 
 do for [i=0:last_chunk_index:skip]{
     start = i*(num+3)+1

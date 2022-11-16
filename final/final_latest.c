@@ -1,9 +1,11 @@
 // これはできているファイル。ロックされている
+// t = 1500から衝突因子を計算
+// まず計算コードを分ける
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include "user_defined.h"
-#define N 200   // 粒子数
+#define N 200     // 粒子数
 #define r_sat 5.0 // satelliteの半径
 #define G 1
 #define M_sate 1.0       // satelliteのwhole_mass
@@ -31,6 +33,8 @@ void clear_vel(Full_particle ptcl[N]);
 void initial_kick(Full_particle ptcl[N], double dt);
 void full_drift(Full_particle ptcl[N], double dt);
 void final_drift(Full_particle ptcl[N], double dt);
+void calc_dmh_grav(Full_particle ptcl[N]);
+void calc_self_grav(Full_particle ptcl[N]);
 
 void initialize_pos(Full_particle ptcl[N])
 {
@@ -98,25 +102,8 @@ void initialize_vel(Full_particle ptcl[N])
 void initialize_acc(Full_particle ptcl[N])
 {
   clear_acc(ptcl);
-  for (int i = 0; i < N; i++)
-  {
-    double l = sqrt(ptcl[i].pos.x * ptcl[i].pos.x + ptcl[i].pos.y * ptcl[i].pos.y + ptcl[i].pos.z * ptcl[i].pos.z);
-    double C = -G * calc_dmh_mass(M_t, r_dmh_vir, r_dmh_scale, ptcl[i]) / (l * l * l);
-    ptcl[i].acc.x += C * ptcl[i].pos.x;
-    ptcl[i].acc.y += C * ptcl[i].pos.y;
-    ptcl[i].acc.z += C * ptcl[i].pos.z;
-  }
-
-  for (int i = 0; i < N; i++)
-  {
-    for (int j = 0; j < N - 1; j++)
-    {
-      double r_ij_3 = pow((ptcl[i].pos.x - ptcl[j].pos.x) * (ptcl[i].pos.x - ptcl[j].pos.x) + (ptcl[i].pos.y - ptcl[j].pos.y) * (ptcl[i].pos.y - ptcl[j].pos.y) + (ptcl[i].pos.z - ptcl[j].pos.z) * (ptcl[i].pos.z - ptcl[j].pos.z) + eps * eps, 1.5);
-      ptcl[i].acc.x += calc_acc(ptcl[i].pos.x, ptcl[j].pos.x, r_ij_3);
-      ptcl[i].acc.y += calc_acc(ptcl[i].pos.y, ptcl[j].pos.y, r_ij_3);
-      ptcl[i].acc.z += calc_acc(ptcl[i].pos.z, ptcl[j].pos.z, r_ij_3);
-    }
-  }
+  calc_dmh_grav(ptcl);
+  calc_self_grav(ptcl);
 }
 int main()
 {
@@ -131,9 +118,7 @@ int main()
 
   double v_cir = sqrt(M_t / r_dmh_vir);
   double dt = eps * 10.0 / v_cir;
-  double t_last = 40000 * dt;
-  int num_divide_time = 40;
-  Full_particle ptcl_t[num_divide_time][N];
+  double t_last = 20000 * dt;
   int last_chunk = 0;
   int s = 0;
   // // 以下リープフロッグ
@@ -252,6 +237,17 @@ void full_drift(Full_particle ptcl[N], double dt)
 void final_drift(Full_particle ptcl[N], double dt)
 {
   clear_acc(ptcl);
+  calc_dmh_grav(ptcl);
+  calc_self_grav(ptcl);
+
+  for (int i = 0; i < N; i++)
+  {
+    ptcl[i].vel.x += (dt * ptcl[i].acc.x) / (2.0);
+    ptcl[i].vel.y += (dt * ptcl[i].acc.y) / (2.0);
+    ptcl[i].vel.z += (dt * ptcl[i].acc.z) / (2.0);
+  }
+}
+void calc_dmh_grav(Full_particle ptcl[N]) {
   for (int i = 0; i < N; i++)
   {
     double l = sqrt(ptcl[i].pos.x * ptcl[i].pos.x + ptcl[i].pos.y * ptcl[i].pos.y + ptcl[i].pos.z * ptcl[i].pos.z);
@@ -260,21 +256,16 @@ void final_drift(Full_particle ptcl[N], double dt)
     ptcl[i].acc.y += C * ptcl[i].pos.y;
     ptcl[i].acc.z += C * ptcl[i].pos.z;
   }
-
+}
+void calc_self_grav(Full_particle ptcl[N]) {
   for (int i = 0; i < N; i++)
   {
-    for (int j = 0; j < N; j++)
+    for (int j = 0; j < N - 1; j++)
     {
       double r_ij_3 = pow((ptcl[i].pos.x - ptcl[j].pos.x) * (ptcl[i].pos.x - ptcl[j].pos.x) + (ptcl[i].pos.y - ptcl[j].pos.y) * (ptcl[i].pos.y - ptcl[j].pos.y) + (ptcl[i].pos.z - ptcl[j].pos.z) * (ptcl[i].pos.z - ptcl[j].pos.z) + eps * eps, 1.5);
       ptcl[i].acc.x += calc_acc(ptcl[i].pos.x, ptcl[j].pos.x, r_ij_3);
       ptcl[i].acc.y += calc_acc(ptcl[i].pos.y, ptcl[j].pos.y, r_ij_3);
       ptcl[i].acc.z += calc_acc(ptcl[i].pos.z, ptcl[j].pos.z, r_ij_3);
     }
-  }
-  for (int i = 0; i < N; i++)
-  {
-    ptcl[i].vel.x += (dt * ptcl[i].acc.x) / (2.0);
-    ptcl[i].vel.y += (dt * ptcl[i].acc.y) / (2.0);
-    ptcl[i].vel.z += (dt * ptcl[i].acc.z) / (2.0);
   }
 }
