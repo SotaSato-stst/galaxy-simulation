@@ -20,7 +20,7 @@
 #define a_0 8.90935 * pow(10.0, -14.0)
 #define initial_satellite_radius 30.0
 
-double calc_acc(double pos_i, double pos_j, double r_ij_3);
+double calc_acc(double pos_i, double pos_j, double r_ij_3, double mass_j);
 double calc_dmh_mass(double whole_mass, double r_virial, double r_scale, Full_particle ptcl);
 void calc_ekin(Full_particle ptcl[N]);
 void calc_ekin_rela(Full_particle ptcl[N]);
@@ -153,9 +153,9 @@ int main()
   printf("last_chunk=%d\n", last_chunk);
 }
 
-double calc_acc(double pos_i, double pos_j, double r_ij_3)
+double calc_acc(double pos_i, double pos_j, double r_ij_3, double mass_j)
 {
-  return -m * (pos_i - pos_j) / (r_ij_3);
+  return -mass_j * (pos_i - pos_j) / (r_ij_3);
 }
 void calc_ekin(Full_particle ptcl[N])
 {
@@ -291,18 +291,18 @@ void calc_self_grav(Full_particle ptcl[N]) {
     for (int j = 0; j < N - 1; j++)
     {
       double r_ij_3 = pow((ptcl[i].pos.x - ptcl[j].pos.x) * (ptcl[i].pos.x - ptcl[j].pos.x) + (ptcl[i].pos.y - ptcl[j].pos.y) * (ptcl[i].pos.y - ptcl[j].pos.y) + (ptcl[i].pos.z - ptcl[j].pos.z) * (ptcl[i].pos.z - ptcl[j].pos.z) + eps * eps, 1.5);
-      ptcl[i].acc.x += calc_acc(ptcl[i].pos.x, ptcl[j].pos.x, r_ij_3);
-      ptcl[i].acc.y += calc_acc(ptcl[i].pos.y, ptcl[j].pos.y, r_ij_3);
-      ptcl[i].acc.z += calc_acc(ptcl[i].pos.z, ptcl[j].pos.z, r_ij_3);
+      ptcl[i].acc.x += calc_acc(ptcl[i].pos.x, ptcl[j].pos.x, r_ij_3, m);
+      ptcl[i].acc.y += calc_acc(ptcl[i].pos.y, ptcl[j].pos.y, r_ij_3, m);
+      ptcl[i].acc.z += calc_acc(ptcl[i].pos.z, ptcl[j].pos.z, r_ij_3, m);
     }
   }
 }
-void final_drift_consider_separate_factor(Full_particle ptcl[N], Separate_factor factor) {
+void calc_separate_factor_grav(Full_particle ptcl[N], Separate_factor factor) {
   for (int i = 0; i < N; i++)
   {
     double r_ij_3 = pow((ptcl[i].pos.x - factor.pos.x) * (ptcl[i].pos.x - factor.pos.x) + (ptcl[i].pos.y - factor.pos.y) * (ptcl[i].pos.y - factor.pos.y) + (ptcl[i].pos.z - factor.pos.z) * (ptcl[i].pos.z - factor.pos.z) + eps * eps, 1.5);
-    ptcl[i].acc.x += calc_acc(ptcl[i].pos.x, factor.pos.x, r_ij_3);
-    ptcl[i].acc.y += calc_acc(ptcl[i].pos.y, factor.pos.y, r_ij_3);
-    ptcl[i].acc.z += calc_acc(ptcl[i].pos.z, factor.pos.z, r_ij_3);
+    ptcl[i].acc.x += calc_acc(ptcl[i].pos.x, factor.pos.x, r_ij_3, factor.mass);
+    ptcl[i].acc.y += calc_acc(ptcl[i].pos.y, factor.pos.y, r_ij_3, factor.mass);
+    ptcl[i].acc.z += calc_acc(ptcl[i].pos.z, factor.pos.z, r_ij_3, factor.mass);
   }
 }
