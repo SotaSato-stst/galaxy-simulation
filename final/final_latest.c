@@ -33,8 +33,10 @@ void clear_vel(Full_particle ptcl[N]);
 void initial_kick(Full_particle ptcl[N], double dt);
 void full_drift(Full_particle ptcl[N], double dt);
 void final_drift(Full_particle ptcl[N], double dt);
+void final_drift_consider_separate_factor(Full_particle ptcl[N], double dt, Separate_factor factor);
 void calc_dmh_grav(Full_particle ptcl[N]);
 void calc_self_grav(Full_particle ptcl[N]);
+void calc_separate_factor_grav(Full_particle ptcl[N],  Separate_factor factor);
 
 void initialize_pos(Full_particle ptcl[N])
 {
@@ -111,6 +113,11 @@ int main()
   char *fname = "tidal.csv";
   fp = fopen(fname, "w");
   Full_particle ptcl[N];
+  Separate_factor factor;
+  factor.mass = 0.1;
+  factor.pos.x = (double)r_dmh_vir;
+  factor.pos.y = 0.0;
+  factor.pos.z = 0.0;
 
   initialize_pos(ptcl);
   initialize_vel(ptcl);
@@ -121,6 +128,7 @@ int main()
   double t_last = 20000 * dt;
   int last_chunk = 0;
   int s = 0;
+
   // // 以下リープフロッグ
   for (int t = 0; t < t_last / dt; t += 1)
   {
@@ -132,6 +140,12 @@ int main()
     initial_kick(ptcl, dt);
     full_drift(ptcl, dt);
     final_drift(ptcl, dt);
+
+    // if (t < 1500) {
+    //   final_drift(ptcl, dt);
+    // }else{
+    //   final_drift_consider_separate_factor(ptcl, dt, factor);
+    // }
     fprintf(fp, "\n\n");
     last_chunk++;
   } // リープフロッグ終わり
@@ -247,6 +261,20 @@ void final_drift(Full_particle ptcl[N], double dt)
     ptcl[i].vel.z += (dt * ptcl[i].acc.z) / (2.0);
   }
 }
+void final_drift_consider_separate_factor(Full_particle ptcl[N], double dt, Separate_factor factor)
+{
+  clear_acc(ptcl);
+  calc_dmh_grav(ptcl);
+  calc_self_grav(ptcl);
+  calc_separate_factor_grav(ptcl, factor);
+
+  for (int i = 0; i < N; i++)
+  {
+    ptcl[i].vel.x += (dt * ptcl[i].acc.x) / (2.0);
+    ptcl[i].vel.y += (dt * ptcl[i].acc.y) / (2.0);
+    ptcl[i].vel.z += (dt * ptcl[i].acc.z) / (2.0);
+  }
+}
 void calc_dmh_grav(Full_particle ptcl[N]) {
   for (int i = 0; i < N; i++)
   {
@@ -267,5 +295,14 @@ void calc_self_grav(Full_particle ptcl[N]) {
       ptcl[i].acc.y += calc_acc(ptcl[i].pos.y, ptcl[j].pos.y, r_ij_3);
       ptcl[i].acc.z += calc_acc(ptcl[i].pos.z, ptcl[j].pos.z, r_ij_3);
     }
+  }
+}
+void final_drift_consider_separate_factor(Full_particle ptcl[N], Separate_factor factor) {
+  for (int i = 0; i < N; i++)
+  {
+    double r_ij_3 = pow((ptcl[i].pos.x - factor.pos.x) * (ptcl[i].pos.x - factor.pos.x) + (ptcl[i].pos.y - factor.pos.y) * (ptcl[i].pos.y - factor.pos.y) + (ptcl[i].pos.z - factor.pos.z) * (ptcl[i].pos.z - factor.pos.z) + eps * eps, 1.5);
+    ptcl[i].acc.x += calc_acc(ptcl[i].pos.x, factor.pos.x, r_ij_3);
+    ptcl[i].acc.y += calc_acc(ptcl[i].pos.y, factor.pos.y, r_ij_3);
+    ptcl[i].acc.z += calc_acc(ptcl[i].pos.z, factor.pos.z, r_ij_3);
   }
 }
