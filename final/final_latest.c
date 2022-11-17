@@ -1,15 +1,23 @@
 // これはできているファイル。ロックされている
-// t = 1500から衝突因子を計算
+// t = 1500（3/4周期くらい）から衝突因子を計算
 // まず計算コードを分ける
+// m = 0.1でまず計算
+// factorの場所をgifでplotできるとわかりやすいかもしれない。ちゃんと当たってるかがわからないので
+// その後、質量を変えてtry
+// 粒子数を5000~に変更
+// ストリームの幅は？ 
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
 #include "user_defined.h"
-#define N 200     // 粒子数
+#include <sys/time.h>
+#define N 100     // 粒子数
 #define r_sat 5.0 // satelliteの半径
 #define G 1
 #define M_sate 1.0       // satelliteのwhole_mass
+#define M_factor 5.0       // factorのwhole_mass
 #define M_t 1000.0       // dmhのwhole_mass
+#define r_factor_x 180.0  // factorのx座標
 #define r_dmh_vir 200.0  // dmhのビリアル半径
 #define r_dmh_scale 20.0 // dmhのスケール長
 #define m M_sate / (double)N
@@ -109,13 +117,21 @@ void initialize_acc(Full_particle ptcl[N])
 }
 int main()
 {
+  unsigned int sec;
+  int nsec;
+  double d_sec;
+  
+  struct timespec start_time, end_time;
+
+  /* 処理開始前の時間を取得 */
+  clock_gettime(CLOCK_REALTIME, &start_time);
   FILE *fp;
   char *fname = "tidal.csv";
   fp = fopen(fname, "w");
   Full_particle ptcl[N];
   Separate_factor factor;
-  factor.mass = 0.1;
-  factor.pos.x = (double)r_dmh_vir;
+  factor.mass = (double)M_factor;
+  factor.pos.x = (double)r_factor_x;
   factor.pos.y = 0.0;
   factor.pos.z = 0.0;
 
@@ -132,25 +148,39 @@ int main()
   // // 以下リープフロッグ
   for (int t = 0; t < t_last / dt; t += 1)
   {
-    fprintf(fp, "%d\n", t);
-    for (int i = 0; i < N; i++)
-    {
-      fprintf(fp, "%f,%f,%f\n", ptcl[i].pos.x, ptcl[i].pos.y, ptcl[i].pos.z);
+    if (t % 200 == 0) {
+      fprintf(fp, "%d\n", t);
+      for (int i = 0; i < N; i++)
+      {
+        fprintf(fp, "%f,%f,%f\n", ptcl[i].pos.x, ptcl[i].pos.y, ptcl[i].pos.z);
+      }
+      fprintf(fp, "\n\n");
     }
     initial_kick(ptcl, dt);
     full_drift(ptcl, dt);
-    final_drift(ptcl, dt);
-
-    // if (t < 1500) {
-    //   final_drift(ptcl, dt);
-    // }else{
-    //   final_drift_consider_separate_factor(ptcl, dt, factor);
-    // }
-    fprintf(fp, "\n\n");
+    if (t < 1500) {
+      final_drift(ptcl, dt);
+    }else{
+      final_drift_consider_separate_factor(ptcl, dt, factor);
+    }
     last_chunk++;
   } // リープフロッグ終わり
   fclose(fp);
   printf("last_chunk=%d\n", last_chunk);
+    /* 処理開始後の時間とクロックを取得 */
+  clock_gettime(CLOCK_REALTIME, &end_time);
+
+  /* 処理中の経過時間を計算 */
+  sec = end_time.tv_sec - start_time.tv_sec;
+  nsec = end_time.tv_nsec - start_time.tv_nsec;
+
+  d_sec = (double)sec
+      + (double)nsec / (1000 * 1000 * 1000);
+
+  /* 計測時間の表示 */
+  printf(
+      "time:%f\n", d_sec
+  );
 }
 
 double calc_acc(double pos_i, double pos_j, double r_ij_3, double mass_j)
@@ -286,6 +316,7 @@ void calc_dmh_grav(Full_particle ptcl[N]) {
   }
 }
 void calc_self_grav(Full_particle ptcl[N]) {
+  #pragma omp parallel for 
   for (int i = 0; i < N; i++)
   {
     for (int j = 0; j < N - 1; j++)
