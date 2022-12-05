@@ -27,6 +27,7 @@
 #define eps r_sat / 100 //ソフトニングパラメータ
 #define a_0 8.90935 * pow(10.0, -14.0)
 #define initial_satellite_radius 30.0
+#define prog_initial_pos_x 20.0
 
 double calc_acc(double pos_i, double pos_j, double r_ij_3, double mass_j);
 double calc_dmh_mass(double whole_mass, double r_virial, double r_scale, vec vector);
@@ -75,13 +76,18 @@ void initialize_pos(Full_particle ptcl[N])
     ptcl[i].pos.x = pow((r_ini * r_ini - ptcl[i].pos.z * ptcl[i].pos.z), 0.5) * cos(2.0 * M_PI * X3);
     ptcl[i].pos.y = pow((r_ini * r_ini - ptcl[i].pos.z * ptcl[i].pos.z), 0.5) * sin(2.0 * M_PI * X3);
     ptcl[i].vel_escape = sqrt(2.0) * pow((1.0 + ptcl[i].pos.x * ptcl[i].pos.x + ptcl[i].pos.y * ptcl[i].pos.y + ptcl[i].pos.z * ptcl[i].pos.z), -0.25);
-    ptcl[i].pos.x += (double)r_dmh_vir;
+    ptcl[i].pos.x += (double)prog_initial_pos_x;
   }
 }
 
 void initialize_vel(Full_particle ptcl[N])
 {
-  double v_cir = sqrt(M_t / r_dmh_vir);
+  vec prog_initial_pos;
+  prog_initial_pos.x = (double)prog_initial_pos_x;
+  prog_initial_pos.y = 0.0;
+  prog_initial_pos.z = 0.0;
+
+  double v_cir = sqrt(calc_dmh_mass(M_t, r_dmh_vir, r_dmh_scale, prog_initial_pos) / prog_initial_pos.x);
   double v_initialized = (double)alpha * v_cir;
   int i = 0;
   int k = 0;
