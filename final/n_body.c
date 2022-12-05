@@ -29,7 +29,7 @@
 #define initial_satellite_radius 30.0
 
 double calc_acc(double pos_i, double pos_j, double r_ij_3, double mass_j);
-double calc_dmh_mass(double whole_mass, double r_virial, double r_scale, Full_particle ptcl);
+double calc_dmh_mass(double whole_mass, double r_virial, double r_scale, vec vector);
 void calc_ekin(Full_particle ptcl[N]);
 void calc_ekin_rela(Full_particle ptcl[N]);
 void calc_epot(Full_particle ptcl[N]);
@@ -245,10 +245,10 @@ double calc_scalar(vec vector)
   double scalar = 0.0;
   return scalar = sqrt((vector.x) * (vector.x) + (vector.y) * (vector.y) + (vector.z) * (vector.z));
 }
-double calc_dmh_mass(double whole_mass, double r_virial, double r_scale, Full_particle ptcl)
+double calc_dmh_mass(double whole_mass, double r_virial, double r_scale, vec vector)
 {
   double rho_s = whole_mass / (4 * M_PI * r_scale * r_scale * r_scale * (log(1 + (r_virial / r_scale)) - (r_virial / r_scale) / (1 + (r_virial / r_scale))));
-  double l = sqrt(ptcl.pos.x * ptcl.pos.x + ptcl.pos.y * ptcl.pos.y + ptcl.pos.z * ptcl.pos.z);
+  double l = sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
   double M_r = 0.0;
   if (l >= r_virial)
   {
@@ -309,7 +309,7 @@ void calc_dmh_grav(Full_particle ptcl[N]) {
   for (int i = 0; i < N; i++)
   {
     double l = sqrt(ptcl[i].pos.x * ptcl[i].pos.x + ptcl[i].pos.y * ptcl[i].pos.y + ptcl[i].pos.z * ptcl[i].pos.z);
-    double C = -G * calc_dmh_mass(M_t, r_dmh_vir, r_dmh_scale, ptcl[i]) / (l * l * l);
+    double C = -G * calc_dmh_mass(M_t, r_dmh_vir, r_dmh_scale, ptcl[i].pos) / (l * l * l);
     ptcl[i].acc.x += C * ptcl[i].pos.x;
     ptcl[i].acc.y += C * ptcl[i].pos.y;
     ptcl[i].acc.z += C * ptcl[i].pos.z;
