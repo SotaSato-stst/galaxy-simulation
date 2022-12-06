@@ -1,4 +1,9 @@
+*
+!*/
+!*.*
 **.csv
+**.data
+**.dSYM/
 資料/
 .vscode/
 .DS_Store
