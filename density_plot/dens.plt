@@ -4,18 +4,18 @@ set size square
 set output "sample.gif"
 
 set pm3d map
-set cbrange [-1:1]
-set xrange [-1.5:1.5]
-set yrange [-1.5:1.5]
-set zrange [-1.5:1.5]
+set cbrange [0:1]
+set xrange [-300:300]
+set yrange [-300:300]
+set zrange [-300:300]
 set ticslevel 0
-set palette defined (-1 "blue", 0 "white", 1 "red")
+set palette defined (0 "white", 10 "red")
 
-file_name = "sample.data"
-last_chunk_index = 2
-skip = 1
+file_name = "density_src.data"
+last_chunk_index = 50
+skip = 5
 # 刻み幅の合計。xとyで同じ想定がされている。
-step_num = 3
+step_num = 600
 
 do for [i=0:last_chunk_index:skip]{
     start = i*(step_num*(step_num+1))+i*3+1
