@@ -82,12 +82,15 @@ void initialize_pos(Full_particle ptcl[N])
 
 void initialize_vel(Full_particle ptcl[N])
 {
+  // x方向にのみ位相を入力
   vec prog_initial_pos;
   prog_initial_pos.x = (double)prog_initial_pos_x;
   prog_initial_pos.y = 0.0;
   prog_initial_pos.z = 0.0;
 
   double v_cir = sqrt(calc_dmh_mass(M_t, r_dmh_vir, r_dmh_scale, prog_initial_pos) / prog_initial_pos.x);
+
+  // 円運動をするように位相に垂直な向きに対しての初速度を与える。x方向に初期位相を与えているのでy方向の初速度に使う
   double v_initialized = (double)alpha * v_cir;
   int i = 0;
   int k = 0;
@@ -256,7 +259,7 @@ double calc_dmh_mass(double whole_mass, double r_virial, double r_scale, vec vec
   double rho_s = whole_mass / (4 * M_PI * r_scale * r_scale * r_scale * (log(1 + (r_virial / r_scale)) - (r_virial / r_scale) / (1 + (r_virial / r_scale))));
   double l = sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
   double M_r = 0.0;
-  if (l >= r_virial)
+  if (l < r_virial)
   {
     M_r = 4 * M_PI * rho_s * r_scale * r_scale * r_scale * (log(1 + (l / r_scale)) - (l / r_scale) / (1 + (l / r_scale)));
   }
