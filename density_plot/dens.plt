@@ -9,13 +9,13 @@ set xrange [-300:300]
 set yrange [-300:300]
 set zrange [-300:300]
 set ticslevel 0
-set palette defined (0 "white", 10 "red")
+set palette defined (-1 '#ffffff', 0 '#000090',1 '#000fff',2 '#0090ff',3 '#0fffee',4 '#90ff70',5 '#ffee00',6 '#ff7000',7 '#ee0000',8 '#7f0000')
 
-file_name = "density_src.data"
+file_name = "density_src2.data"
 last_chunk_index = 50
 skip = 5
 # 刻み幅の合計。xとyで同じ想定がされている。
-step_num = 600
+step_num = 200
 
 do for [i=0:last_chunk_index:skip]{
     start = i*(step_num*(step_num+1))+i*3+1
