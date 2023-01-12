@@ -15,6 +15,17 @@ t,Ek,Ep,Em,Viral
 .
 .
 
+# 各pltファイルを用いてplotした図
+
+# 2d_animation.plt
+
+![](./image/cold-collapse_t0.png "hero")
+# enegy.plt
+
+![](./image/enegy.png "hero")
+# virial_ratio.plt
+
+![](./image/virial_ratio.png "hero")
 ## 備考
 
 t：時間[Myr]  
