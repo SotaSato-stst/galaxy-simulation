@@ -21,6 +21,8 @@ double dv_dt(double y_i, double y_j, double r_ij_3);
 double dw_dt(double z_i, double z_j, double r_ij_3);
 double Ep_total=0;
 double Ek_total=0;
+double Em_total=0;
+double t_unit = 14.9181;
 double eta = 0.1;
 double dt;
 double t_ff;
@@ -28,9 +30,12 @@ int last_chunk = 0;
 double eps = R/100; //ソフトニングパラメータ
 
 int main () {
-FILE *fp;
-char *fname = "cold-collapse.csv";
-fp = fopen( fname, "w");
+  FILE *fp;
+  char *fname = "cold-collapse.csv";
+  fp = fopen( fname, "w");
+  FILE *fp_enegy;
+  char *fname_enegy = "cold-collapse_enegy.csv";
+  fp_enegy = fopen( fname_enegy, "w");
   int i = 0;
   int j = 0;
   int k = 0;
@@ -122,6 +127,7 @@ fp = fopen( fname, "w");
 // 以下リープフロッグ
   dt = (eps / v_virial) * eta;
   t_ff = sqrt((R*R*R*M_PI*M_PI) / (8 * N) );
+  int step = 0;
 
   for (t = 0; t < 10*t_ff;t += dt){
     // まず、vを0.5dtでvを作り、そのvでrを作る
@@ -148,15 +154,53 @@ fp = fopen( fname, "w");
         v[i][k] += (dt*a[i][k])/2.0;
       }
     }
-    fprintf(fp, "%f\n",t);
-    for(i=0;i<N;i++){
-    fprintf(fp, "%f,%f,%f\n",r[i][0],r[i][1],r[i][2]);
+    if (step % 50 == 0) {
+      // 位置と速度座標への書きこみ
+      fprintf(fp, "%f\n",t * t_unit);
+      for(i=0;i<N;i++){
+      fprintf(fp, "%f,%f,%f,%f,%f,%f\n",r[i][0],r[i][1],r[i][2],v[i][0],v[i][1],v[i][2]);
+      }
+      fprintf(fp,"\n\n");
+
+      // エネルギーの書き込み
+
+      // 初期化
+      Ep_total = 0;
+      Ek_total = 0;
+      for (i=0;i<N;i++){
+        Ep[i] = 0;
+        Ek[i] = 0;
+      }
+
+      // Ep_totalからv_virialを求めにいく 
+      for (i=0;i<N;i++){
+        Ep[i] = (G*m*m) / eps;
+        double x_i = r[i][0];
+        double y_i = r[i][1];
+        double z_i = r[i][2];
+        for (j=0;j<N;j++){
+          Ep[i] += -(G*m*m) / sqrt((x_i-r[j][0])*(x_i-r[j][0])+(y_i-r[j][1])*(y_i-r[j][1])+(z_i-r[j][2])*(z_i-r[j][2])+eps2);
+        }
+        Ep_total += Ep[i];
+      }
+      Ep_total = Ep_total * 0.5; 
+
+      for (i=0;i<N;i++){
+        Ek[i] = (0.5) * (pow(v[i][0],2.0)+pow(v[i][1],2.0)+pow(v[i][2],2.0));
+        Ek_total += Ek[i];
+      }
+
+      double E_unit = 4.966 * pow(10.0,6.0);
+
+      fprintf(fp_enegy, "%f,%f,%f,%f,%f\n",t * t_unit, Ek_total * E_unit, Ep_total * E_unit, (Ek_total + Ep_total) * E_unit, - Ek_total / Ep_total);
     }
-    fprintf(fp,"\n\n");
     last_chunk ++;
+    step ++;
 }// リープフロッグ終わり
   fclose(fp);
+  fclose(fp_enegy);
   printf ("%d", last_chunk);
+  printf("v_virial=%f[km s^-1],t_ff=%f[Myr],dt=%f[Myr]", v_virial * 65.589, t_ff * t_unit, dt * t_unit);
 }
 
 
