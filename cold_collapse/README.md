@@ -19,7 +19,7 @@ t,Ek,Ep,Em,Viral
 
 # 2d_animation.plt
 
-![](./image/cold-collapse_t0.png "hero")
+![](./image/cold-collapse.gif "hero")
 # enegy.plt
 
 ![](./image/enegy.png "hero")
