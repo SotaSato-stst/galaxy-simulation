@@ -151,6 +151,8 @@ int main()
   double step_fine = 2.0;
   double dt = (eps / v_cir) * step_fine;
   double t_last = 20000 * dt;
+  double v_purtuber = 0.01333333
+  double initialize_pos_x_purtuber = 73.333333
   int last_chunk = 0;
   int s = 0;
 
@@ -161,8 +163,8 @@ int main()
       // purtuberの影響をストリームに与えたくない間は、pos.xを無限遠に置いておく。(もっと良い方法はありそう。)
       factor.pos.x = 999999;
     } else {
-      // pos.xの関数
-      factor.pos.x = -0.01333333 * (double)t + 73.333333;
+      // pos.xの関数(x方向にのみ移動)
+      factor.pos.x = -v_purtuber * (double)t + initialize_pos_x_purtuber;
     }
    // 200step毎にprintfする     
     if (t % 200 == 0) {
