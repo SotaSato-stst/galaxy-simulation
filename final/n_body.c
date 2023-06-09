@@ -164,6 +164,7 @@ int main()
       // pos.xの関数
       factor.pos.x = -0.01333333 * (double)t + 73.333333;
     }
+   // 200step毎にprintfする     
     if (t % 200 == 0) {
       fprintf(fp, "%d\n", t);
       for (int i = 0; i < N; i++)
@@ -347,6 +348,7 @@ void calc_self_grav(Full_particle ptcl[N]) {
 void calc_separate_factor_grav(Full_particle ptcl[N], Separate_factor factor) {
   for (int i = 0; i < N; i++)
   {
+    // ソフトニングパラメーター(≒purtuberの大きさ)を調整するパラメータ。手動で制御
     double constant = 4000;
     double eps_factor = eps * eps * constant;
     double r_ij_3 = pow((ptcl[i].pos.x - factor.pos.x) * (ptcl[i].pos.x - factor.pos.x) + (ptcl[i].pos.y - factor.pos.y) * (ptcl[i].pos.y - factor.pos.y) + (ptcl[i].pos.z - factor.pos.z) * (ptcl[i].pos.z - factor.pos.z) + eps_factor, 1.5);
