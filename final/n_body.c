@@ -1,33 +1,29 @@
-// これはできているファイル。ロックされている
-// t = 1500（3/4周期くらい）から衝突因子を計算
-// まず計算コードを分ける
-// m = 0.1でまず計算
-// factorの場所をgifでplotできるとわかりやすいかもしれない。ちゃんと当たってるかがわからないので
-// その後、質量を変えてtry
-// 粒子数を5000~に変更
-// ストリームの幅は？ 
+#define _POSIX_C_SOURCE 199309L
 #include <stdio.h>
+#include <stdbool.h>
 #include <math.h>
 #include <stdlib.h>
-#include "user_defined.h"
 #include <sys/time.h>
-#define N 100     // 粒子数
-#define r_sat 5.0 // satelliteの半径
-#define G 1
-#define M_sate 1.0       // satelliteのwhole_mass
-#define M_factor 5.0       // factorのwhole_mass
+#include <time.h>
+#include "user_defined.h"
+#define N 20000     // 粒子数
+#define r_sat 2.0 // satelliteの半径
+#define M_sate 1.0    // satelliteのwhole_mass
+#define M_factor 10.0 // factorのwhole_mass
 #define M_t 1000.0       // dmhのwhole_mass
-#define r_factor_x 180.0  // factorのx座標
 #define r_dmh_vir 200.0  // dmhのビリアル半径
 #define r_dmh_scale 20.0 // dmhのスケール長
 #define m M_sate / (double)N
-#define alpha 1
+#define G 1
 #define era 0.1
-#define v_0 65.58097798
 #define eps r_sat / 100 //ソフトニングパラメータ
-#define a_0 8.90935 * pow(10.0, -14.0)
-#define initial_satellite_radius 30.0
-#define prog_initial_pos_x 20.0
+#define initial_satellite_radius 10.0
+#define alpha 0.7
+#define prog_initial_pos_x 60.0
+#ifndef M_PI
+/* M_PIが未定義であればここで定義する */
+#define M_PI 3.14159265359 /* 桁数はもっと多い方がいいかも */
+#endif
 
 double calc_acc(double pos_i, double pos_j, double r_ij_3, double mass_j);
 double calc_dmh_mass(double whole_mass, double r_virial, double r_scale, vec vector);
@@ -62,9 +58,9 @@ void initialize_pos(Full_particle ptcl[N])
         break;
       }
       k++;
-      if (k == 100)
+      if (k == 10000)
       {
-        printf("100回に達しました。");
+        printf("10000回に達しました。");
         break;
       }
     }
@@ -75,22 +71,19 @@ void initialize_pos(Full_particle ptcl[N])
     ptcl[i].pos.z = (1.0 - 2.0 * X2) * r_ini;
     ptcl[i].pos.x = pow((r_ini * r_ini - ptcl[i].pos.z * ptcl[i].pos.z), 0.5) * cos(2.0 * M_PI * X3);
     ptcl[i].pos.y = pow((r_ini * r_ini - ptcl[i].pos.z * ptcl[i].pos.z), 0.5) * sin(2.0 * M_PI * X3);
-    ptcl[i].vel_escape = sqrt(2.0) * pow((1.0 + ptcl[i].pos.x * ptcl[i].pos.x + ptcl[i].pos.y * ptcl[i].pos.y + ptcl[i].pos.z * ptcl[i].pos.z), -0.25);
+    ptcl[i].vel_escape = sqrt(2.0) * pow((1.0 + ptcl[i].pos.x * ptcl[i].pos.x + ptcl[i].pos.y * ptcl[i].pos.y + ptcl[i].pos.z * ptcl[i].pos.z), -0.25) * sqrt((double)M_sate);
     ptcl[i].pos.x += (double)prog_initial_pos_x;
   }
 }
 
 void initialize_vel(Full_particle ptcl[N])
 {
-  // x方向にのみ位相を入力
   vec prog_initial_pos;
   prog_initial_pos.x = (double)prog_initial_pos_x;
   prog_initial_pos.y = 0.0;
   prog_initial_pos.z = 0.0;
 
   double v_cir = sqrt(calc_dmh_mass(M_t, r_dmh_vir, r_dmh_scale, prog_initial_pos) / prog_initial_pos.x);
-
-  // 円運動をするように位相に垂直な向きに対しての初速度を与える。x方向に初期位相を与えているのでy方向の初速度に使う
   double v_initialized = (double)alpha * v_cir;
   int i = 0;
   int k = 0;
@@ -134,22 +127,29 @@ int main()
 
   /* 処理開始前の時間を取得 */
   clock_gettime(CLOCK_REALTIME, &start_time);
+
   FILE *fp;
-  char *fname = "tidal.csv";
+  char *fname = "N20000_last.csv";
   fp = fopen(fname, "w");
+
+  FILE *file;
+  char *filename = "N20000_last_factor.csv";
+  file = fopen(filename, "w");
   Full_particle ptcl[N];
   Separate_factor factor;
   factor.mass = (double)M_factor;
-  factor.pos.x = (double)r_factor_x;
+  factor.pos.x = 0.0;
   factor.pos.y = 0.0;
   factor.pos.z = 0.0;
+
 
   initialize_pos(ptcl);
   initialize_vel(ptcl);
   initialize_acc(ptcl);
 
   double v_cir = sqrt(M_t / r_dmh_vir);
-  double dt = eps * 10.0 / v_cir;
+  double step_fine = 2.0;
+  double dt = (eps / v_cir) * step_fine;
   double t_last = 20000 * dt;
   int last_chunk = 0;
   int s = 0;
@@ -157,26 +157,33 @@ int main()
   // // 以下リープフロッグ
   for (int t = 0; t < t_last / dt; t += 1)
   {
+    if (t < 7000) {
+      // purtuberの影響をストリームに与えたくない間は、pos.xを無限遠に置いておく。(もっと良い方法はありそう。)
+      factor.pos.x = 999999;
+    } else {
+      // pos.xの関数
+      factor.pos.x = -0.01333333 * (double)t + 73.333333;
+    }
     if (t % 200 == 0) {
       fprintf(fp, "%d\n", t);
       for (int i = 0; i < N; i++)
       {
-        fprintf(fp, "%f,%f,%f\n", ptcl[i].pos.x, ptcl[i].pos.y, ptcl[i].pos.z);
+        fprintf(fp, "%f,%f,%f,%f,%f,%f\n", ptcl[i].pos.x, ptcl[i].pos.y, ptcl[i].pos.z, ptcl[i].vel.x, ptcl[i].vel.y, ptcl[i].vel.z);
       }
+      fprintf(file, "%f,%f,%f\n\n\n", factor.pos.x, factor.pos.y, factor.pos.z);
       fprintf(fp, "\n\n");
     }
     initial_kick(ptcl, dt);
     full_drift(ptcl, dt);
-    if (t < 1500) {
-      final_drift(ptcl, dt);
-    }else{
-      final_drift_consider_separate_factor(ptcl, dt, factor);
-    }
+    final_drift_consider_separate_factor(ptcl, dt, factor);
+
     last_chunk++;
   } // リープフロッグ終わり
   fclose(fp);
+  fclose(file);
   printf("last_chunk=%d\n", last_chunk);
-    /* 処理開始後の時間とクロックを取得 */
+
+  /* 処理開始後の時間とクロックを取得 */
   clock_gettime(CLOCK_REALTIME, &end_time);
 
   /* 処理中の経過時間を計算 */
@@ -340,7 +347,9 @@ void calc_self_grav(Full_particle ptcl[N]) {
 void calc_separate_factor_grav(Full_particle ptcl[N], Separate_factor factor) {
   for (int i = 0; i < N; i++)
   {
-    double r_ij_3 = pow((ptcl[i].pos.x - factor.pos.x) * (ptcl[i].pos.x - factor.pos.x) + (ptcl[i].pos.y - factor.pos.y) * (ptcl[i].pos.y - factor.pos.y) + (ptcl[i].pos.z - factor.pos.z) * (ptcl[i].pos.z - factor.pos.z) + eps * eps, 1.5);
+    double constant = 4000;
+    double eps_factor = eps * eps * constant;
+    double r_ij_3 = pow((ptcl[i].pos.x - factor.pos.x) * (ptcl[i].pos.x - factor.pos.x) + (ptcl[i].pos.y - factor.pos.y) * (ptcl[i].pos.y - factor.pos.y) + (ptcl[i].pos.z - factor.pos.z) * (ptcl[i].pos.z - factor.pos.z) + eps_factor, 1.5);
     ptcl[i].acc.x += calc_acc(ptcl[i].pos.x, factor.pos.x, r_ij_3, factor.mass);
     ptcl[i].acc.y += calc_acc(ptcl[i].pos.y, factor.pos.y, r_ij_3, factor.mass);
     ptcl[i].acc.z += calc_acc(ptcl[i].pos.z, factor.pos.z, r_ij_3, factor.mass);
